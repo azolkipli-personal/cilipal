@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { View, Text, Image, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDatabase } from "../../../src/hooks/useDatabase";
-import { Photo, Plant, CARE_TYPE_CONFIG } from "../../../src/types";
-import { formatDateTime } from "../../../src/utils/date-utils";
+import { useDatabase } from "../../src/hooks/useDatabase";
+import { Photo, Plant, CARE_TYPE_CONFIG } from "../../src/types";
+import { formatDateTime } from "../../src/utils/date-utils";
 
 export default function DiaryEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

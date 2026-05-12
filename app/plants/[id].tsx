@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDatabase } from "../../../src/hooks/useDatabase";
+import { useDatabase } from "../../src/hooks/useDatabase";
 import {
   Plant,
   CareLog,
@@ -19,8 +19,8 @@ import {
   STAGE_EMOJI,
   PLANT_STAGES,
   CARE_TYPE_CONFIG,
-} from "../../../src/types";
-import { formatDate, formatDateTime, daysSince, timeAgo } from "../../../src/utils/date-utils";
+} from "../../src/types";
+import { formatDate, formatDateTime, daysSince, timeAgo } from "../../src/utils/date-utils";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 

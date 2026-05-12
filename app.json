@@ -1,13 +1,12 @@
 {
   "expo": {
-    "name": "CiliPal",
+    "name": "cilipal",
     "slug": "cilipal",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "scheme": "cilipal",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -22,7 +21,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#DC2626"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.ammarzolkipli.cilipal"
     },
     "web": {
@@ -45,6 +43,7 @@
         }
       ],
       "expo-location"
-    ]
+    ],
+    "scheme": "cilipal"
   }
 }
