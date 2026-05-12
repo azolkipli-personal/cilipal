@@ -21,6 +21,7 @@ import {
   CARE_TYPE_CONFIG,
 } from "../../src/types";
 import { formatDate, formatDateTime, daysSince, timeAgo } from "../../src/utils/date-utils";
+import { generateRecommendations, CareRecommendation } from "../../src/utils/recommendations";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -32,6 +33,7 @@ export default function PlantDetailScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [recommendations, setRecommendations] = useState<CareRecommendation[]>([]);
 
   async function load() {
     if (!repo || !id) return;
@@ -44,6 +46,8 @@ export default function PlantDetailScreen() {
       setPhotos(ph);
       const s = await repo.getPlantStats(id);
       setStats(s);
+
+      setRecommendations(generateRecommendations(p, logs, ph));
     }
   }
 
@@ -177,6 +181,26 @@ export default function PlantDetailScreen() {
           />
         </View>
 
+        {/* Recommendations */}
+        {recommendations.length > 0 && (
+          <View className="mx-4 mb-4">
+            <Text className="text-sm font-medium text-gray-600 mb-2">Recommended Care</Text>
+            {recommendations.map((rec) => (
+              <View
+                key={rec.id}
+                className={`bg-white rounded-xl p-4 mb-2 shadow-sm border border-l-4 ${rec.priority === "high" ? "border-l-red-500" : "border-l-blue-400"
+                  } border-gray-100`}
+              >
+                <View className="flex-row items-center mb-1">
+                  <Text className="text-xl mr-2">{rec.icon}</Text>
+                  <Text className="font-bold text-gray-800 flex-1">{rec.title}</Text>
+                </View>
+                <Text className="text-gray-600 text-sm leading-5">{rec.description}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Stage Progress */}
         <View className="mx-4 mb-4">
           <Text className="text-sm font-medium text-gray-600 mb-2">Progress</Text>
@@ -188,16 +212,14 @@ export default function PlantDetailScreen() {
                 return (
                   <View key={s} className="items-center" style={{ flex: 1 }}>
                     <View
-                      className={`w-8 h-8 rounded-full items-center justify-center mb-1 ${
-                        isActive ? "bg-chili-600" : "bg-gray-200"
-                      }`}
+                      className={`w-8 h-8 rounded-full items-center justify-center mb-1 ${isActive ? "bg-chili-600" : "bg-gray-200"
+                        }`}
                     >
                       <Text className="text-sm">{STAGE_EMOJI[s]}</Text>
                     </View>
                     <Text
-                      className={`text-xs ${
-                        isActive ? "text-chili-700 font-medium" : "text-gray-400"
-                      }`}
+                      className={`text-xs ${isActive ? "text-chili-700 font-medium" : "text-gray-400"
+                        }`}
                     >
                       {s.slice(0, 4)}
                     </Text>
