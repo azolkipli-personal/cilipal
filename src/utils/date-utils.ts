@@ -1,6 +1,13 @@
 export function generateId(): string {
-  return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  // Hermes (React Native) does not have a `crypto` global, so we use a
+  // pure-JS UUID v4 implementation instead.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
+
 
 export function todayISO(): string {
   return new Date().toISOString().split("T")[0];
