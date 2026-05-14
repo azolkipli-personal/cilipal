@@ -122,23 +122,27 @@ export default function NewPlantScreen() {
       <ScrollView className="flex-1 px-4" keyboardShouldPersistTaps="handled">
         {/* Photo */}
         <View className="items-center my-6">
-          <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Add Photo", "Choose a photo for this plant", [
-                { text: "Take Photo", onPress: takePhoto },
-                { text: "Pick from Gallery", onPress: pickImage },
-                { text: "Cancel", style: "cancel" },
-              ]);
-            }}
-            className="w-32 h-32 rounded-full bg-gray-200 items-center justify-center overflow-hidden"
-          >
+          <View className="w-32 h-32 rounded-full bg-gray-200 items-center justify-center overflow-hidden mb-3">
             {photoUri ? (
               <Image source={{ uri: photoUri }} className="w-32 h-32" />
             ) : (
               <Text className="text-4xl">🌶️</Text>
             )}
-          </TouchableOpacity>
-          <Text className="text-xs text-gray-400 mt-2">Tap to add photo</Text>
+          </View>
+          <View className="flex-row gap-3">
+            <TouchableOpacity
+              onPress={takePhoto}
+              className="flex-row items-center gap-1 px-4 py-2 bg-gray-700 rounded-xl"
+            >
+              <Text className="text-white text-sm font-medium">📷 Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={pickImage}
+              className="flex-row items-center gap-1 px-4 py-2 bg-gray-500 rounded-xl"
+            >
+              <Text className="text-white text-sm font-medium">🖼️ Gallery</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Name */}
