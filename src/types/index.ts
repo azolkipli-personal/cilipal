@@ -104,3 +104,13 @@ export const STAGE_EMOJI: Record<PlantStage, string> = {
   fruiting: "🌶️",
   harvested: "🏆",
 };
+
+export interface Variety {
+  slug: string;
+  name: string;
+  scoville_min: number;
+  scoville_max: number;
+  days_to_maturity: number;
+  care_tips: string;
+  heat_level: "Mild" | "Medium" | "Hot" | "Extreme";
+}

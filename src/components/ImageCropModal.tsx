@@ -110,7 +110,7 @@ export default function ImageCropModal({ visible, imageUri, onDone, onCancel }: 
             // Get natural image size so we can map normalized crop coords to pixels
             const { width: natW, height: natH } =
                 await ImageManipulator.ImageManipulator.manipulate(imageUri).renderAsync().then(
-                    (r) => r
+                    (r: any) => r
                 ).catch(() => ({ width: 1000, height: 1000 }));
 
             // Estimate image natural size via Image.getSize
@@ -133,9 +133,9 @@ export default function ImageCropModal({ visible, imageUri, onDone, onCancel }: 
                     width: Math.round(crop.width * imgW),
                     height: Math.round(crop.height * imgH),
                 })
-                .saveAsync({ compress: 0.9, format: ImageManipulator.SaveFormat.JPEG });
+                .renderAsync();
 
-            onDone(result.uri);
+            onDone((result as any).uri || result.localUri || "");
         } catch (e) {
             console.error("Crop error:", e);
         } finally {

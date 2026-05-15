@@ -1,14 +1,48 @@
 import "../src/global.css";
-
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { DatabaseProvider } from "../src/hooks/useDatabase";
-import { View, ActivityIndicator, Text } from "react-native";
+import { View, ActivityIndicator, Text, Platform } from "react-native";
 import { useDatabase } from "../src/hooks/useDatabase";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as Notifications from "expo-notifications";
+import { checkWeatherConditions } from "../src/services/WeatherMonitorService";
+
+// Configure notifications behavior
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const { isReady } = useDatabase();
+
+  useEffect(() => {
+    async function setup() {
+      // Request notification permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus === "granted") {
+        // Run weather check on app mount
+        checkWeatherConditions();
+      }
+    }
+    
+    if (isReady) {
+      setup();
+    }
+  }, [isReady]);
 
   if (!isReady) {
     return (

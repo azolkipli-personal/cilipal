@@ -201,4 +201,41 @@ export class Repository {
     );
     return stats || { photo_count: 0, care_log_count: 0, last_watered: null, last_treated: null };
   }
+
+  async getGlobalStats(): Promise<{
+    total_plants: number;
+    total_photos: number;
+    total_care_logs: number;
+    stage_distribution: Record<string, number>;
+    variety_counts: Record<string, number>;
+  }> {
+    const counts = await this.db.getFirstAsync<any>(
+      `SELECT 
+        (SELECT COUNT(*) FROM plants) as total_plants,
+        (SELECT COUNT(*) FROM photos) as total_photos,
+        (SELECT COUNT(*) FROM care_logs) as total_care_logs`
+    );
+
+    const stages = await this.db.getAllAsync<{ stage: string; count: number }>(
+      "SELECT stage, COUNT(*) as count FROM plants GROUP BY stage"
+    );
+
+    const varieties = await this.db.getAllAsync<{ variety: string; count: number }>(
+      "SELECT variety, COUNT(*) as count FROM plants GROUP BY variety"
+    );
+
+    const stage_dist: Record<string, number> = {};
+    stages.forEach(s => stage_dist[s.stage] = s.count);
+
+    const variety_dist: Record<string, number> = {};
+    varieties.forEach(v => variety_dist[v.variety] = v.count);
+
+    return {
+      total_plants: counts?.total_plants || 0,
+      total_photos: counts?.total_photos || 0,
+      total_care_logs: counts?.total_care_logs || 0,
+      stage_distribution: stage_dist,
+      variety_counts: variety_dist
+    };
+  }
 }

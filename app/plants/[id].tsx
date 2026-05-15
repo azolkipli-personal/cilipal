@@ -20,8 +20,10 @@ import {
   PLANT_STAGES,
   CARE_TYPE_CONFIG,
 } from "../../src/types";
+import { VARIETIES, getVarietyBySlug } from "../../src/data/varieties";
 import { formatDate, formatDateTime, daysSince, timeAgo } from "../../src/utils/date-utils";
 import { generateRecommendations, CareRecommendation } from "../../src/utils/recommendations";
+import { sharePlantCard } from "../../src/utils/ShareCardGenerator";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -34,6 +36,8 @@ export default function PlantDetailScreen() {
   const [stats, setStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [recommendations, setRecommendations] = useState<CareRecommendation[]>([]);
+
+  const varietyInfo = plant ? getVarietyBySlug(plant.variety) : null;
 
   async function load() {
     if (!repo || !id) return;
@@ -76,6 +80,21 @@ export default function PlantDetailScreen() {
     );
   };
 
+  const handleShare = async () => {
+    if (!plant || !stats) return;
+    try {
+      const harvestLogs = careLogs.filter((l) => l.type === "harvest");
+      await sharePlantCard({
+        plant,
+        harvestCount: harvestLogs.length,
+        photoCount: stats.photo_count,
+        daysSinceAcquired: daysSince(plant.acquired_date),
+      });
+    } catch (e: any) {
+      Alert.alert("Share Failed", e.message || "Could not share plant profile.");
+    }
+  };
+
   if (!plant) {
     return (
       <SafeAreaView className="flex-1 bg-chili-50 items-center justify-center">
@@ -98,9 +117,15 @@ export default function PlantDetailScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Text className="text-2xl">← Back</Text>
             </TouchableOpacity>
-            <View className="flex-row">
+            <View className="flex-row items-center">
               <TouchableOpacity
-                onPress={() => router.push(`/plants/${id}/edit`)}
+                onPress={handleShare}
+                className="mr-4"
+              >
+                <Text className="text-lg">🔗</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push(`/plants/new?id=${id}`)}
                 className="mr-4"
               >
                 <Text className="text-lg">✏️</Text>
@@ -122,9 +147,9 @@ export default function PlantDetailScreen() {
             )}
           </View>
           <Text className="text-2xl font-bold text-gray-800">{plant.name}</Text>
-          {plant.variety && (
-            <Text className="text-base text-gray-500">{plant.variety}</Text>
-          )}
+          <Text className="text-base text-gray-500">
+            {varietyInfo ? varietyInfo.name : plant.variety}
+          </Text>
           <View className="flex-row mt-2">
             <View className="bg-white px-3 py-1 rounded-full mr-2">
               <Text className="text-sm text-gray-600">
@@ -138,6 +163,34 @@ export default function PlantDetailScreen() {
             </View>
           </View>
         </View>
+
+        {/* Heat Meter Section */}
+        {varietyInfo && (
+          <View className="mx-4 mb-4 bg-red-50 border border-red-100 rounded-2xl p-4 shadow-sm">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-sm font-bold text-red-800 uppercase tracking-wider">
+                Heat Intensity: {varietyInfo.heat_level}
+              </Text>
+              <Text className="text-xs text-red-600 font-medium">
+                {varietyInfo.scoville_min.toLocaleString()} - {varietyInfo.scoville_max.toLocaleString()} SHU
+              </Text>
+            </View>
+            <HeatBar level={varietyInfo.heat_level} />
+            <View className="flex-row items-center mt-3 bg-white/50 rounded-lg p-2">
+              <Text className="text-lg mr-2">📅</Text>
+              <View>
+                <Text className="text-xs text-gray-500 font-bold uppercase">Estimated Harvest</Text>
+                <Text className="text-sm text-gray-800 font-medium">
+                  {new Date(new Date(plant.acquired_date).getTime() + varietyInfo.days_to_maturity * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                  <Text className="text-xs text-gray-400 font-normal"> ({varietyInfo.days_to_maturity} days)</Text>
+                </Text>
+              </View>
+            </View>
+            <Text className="text-xs text-gray-500 mt-2 italic">
+              Care Tip: {varietyInfo.care_tips}
+            </Text>
+          </View>
+        )}
 
         {/* Quick Stats */}
         {stats && (
@@ -291,7 +344,7 @@ export default function PlantDetailScreen() {
 
         {/* Notes */}
         {plant.notes && (
-          <View className="mx-4 mb-8">
+          <View className="mx-4 mb-4">
             <Text className="text-sm font-medium text-gray-600 mb-2">Notes</Text>
             <View className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
               <Text className="text-gray-700">{plant.notes}</Text>
@@ -299,9 +352,41 @@ export default function PlantDetailScreen() {
           </View>
         )}
 
+        {/* Share Profile Banner */}
+        <View className="mx-4 mb-8">
+          <TouchableOpacity
+            onPress={handleShare}
+            className="bg-chili-600 rounded-2xl py-4 flex-row items-center justify-center shadow-md"
+          >
+            <Text className="text-white text-xl mr-2">🔗</Text>
+            <Text className="text-white font-bold text-base">Share {plant.name}'s Profile</Text>
+          </TouchableOpacity>
+        </View>
+
         <View className="h-8" />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function HeatBar({ level }: { level: string }) {
+  const segments = [
+    { label: "Mild", color: "#FCD34D", active: level === "Mild" || level === "Medium" || level === "Hot" || level === "Extreme" },
+    { label: "Med", color: "#F59E0B", active: level === "Medium" || level === "Hot" || level === "Extreme" },
+    { label: "Hot", color: "#EF4444", active: level === "Hot" || level === "Extreme" },
+    { label: "Super", color: "#B91C1C", active: level === "Extreme" },
+  ];
+
+  return (
+    <View className="flex-row h-2 w-full gap-1">
+      {segments.map((seg, i) => (
+        <View
+          key={i}
+          className="flex-1 rounded-full"
+          style={{ backgroundColor: seg.active ? seg.color : "#E5E7EB" }}
+        />
+      ))}
+    </View>
   );
 }
 

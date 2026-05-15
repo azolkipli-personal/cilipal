@@ -7,14 +7,16 @@ import {
   ScrollView,
   Alert,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useDatabase } from "../../src/hooks/useDatabase";
-import { Plant, CareType, CARE_TYPE_CONFIG } from "../../src/types";
+import { Plant, CareType, CARE_TYPE_CONFIG, PlantStage } from "../../src/types";
 import { generateId, nowISO } from "../../src/utils/date-utils";
 import ImageCropModal from "../../src/components/ImageCropModal";
+import { analyzePlantPhoto } from "../../src/services/ai-analysis";
 
 const CARE_TYPES: CareType[] = [
   "watering",
@@ -36,6 +38,7 @@ export default function CareLogScreen() {
   );
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   // Photo state
   const [rawImageUri, setRawImageUri] = useState<string | null>(null);
@@ -97,7 +100,6 @@ export default function CareLogScreen() {
 
   const handleCropCancel = () => {
     setShowCrop(false);
-    // Keep rawImageUri so user can re-open crop if they want
   };
 
   const save = async () => {
@@ -111,7 +113,7 @@ export default function CareLogScreen() {
     const finalPhotoUri = croppedImageUri || rawImageUri;
 
     try {
-      // Always save a care log
+      // 1. Save care log
       await repo.insertCareLog({
         id: generateId(),
         plant_id: selectedPlantId,
@@ -121,8 +123,16 @@ export default function CareLogScreen() {
         details: null,
       });
 
-      // If there's a photo, save it too (especially for observation type)
+      // 2. Save photo and run AI analysis if needed
+      let aiResult = null;
       if (finalPhotoUri) {
+        setAnalyzing(true);
+        try {
+          aiResult = await analyzePlantPhoto(finalPhotoUri);
+        } catch (e) {
+          console.log("AI Analysis skipped or failed", e);
+        }
+
         await repo.insertPhoto({
           id: generateId(),
           plant_id: selectedPlantId,
@@ -130,11 +140,37 @@ export default function CareLogScreen() {
           thumbnail_uri: null,
           date: nowISO(),
           notes: notes.trim(),
-          ai_analysis: null,
+          ai_analysis: aiResult ? JSON.stringify(aiResult) : null,
         });
       }
 
-      const plantName = plants.find((p) => p.id === selectedPlantId)?.name;
+      const currentPlant = plants.find((p) => p.id === selectedPlantId);
+      const plantName = currentPlant?.name;
+
+      // 3. Check for stage update suggestion
+      if (aiResult?.stage && currentPlant) {
+        const detectedStage = aiResult.stage.toLowerCase() as PlantStage;
+        if (detectedStage !== currentPlant.stage && ["seedling", "vegetative", "flowering", "fruiting", "harvested"].includes(detectedStage)) {
+          setSaving(false);
+          setAnalyzing(false);
+          Alert.alert(
+            "🌱 Stage Update?",
+            `AI detected your plant might be in the '${detectedStage}' stage. (Currently marked as '${currentPlant.stage}'). Would you like to update it?`,
+            [
+              { text: "No", onPress: () => router.back() },
+              {
+                text: "Yes, Update",
+                onPress: async () => {
+                  await repo.updatePlant(selectedPlantId, { stage: detectedStage });
+                  router.back();
+                }
+              }
+            ]
+          );
+          return;
+        }
+      }
+
       Alert.alert(
         "✅ Done",
         `${CARE_TYPE_CONFIG[careType].emoji} logged for ${plantName}`,
@@ -144,6 +180,7 @@ export default function CareLogScreen() {
       Alert.alert("Error", "Failed to save log");
     } finally {
       setSaving(false);
+      setAnalyzing(false);
     }
   };
 
@@ -237,9 +274,6 @@ export default function CareLogScreen() {
                 <Text className="text-sm text-red-500 font-medium">🗑️ Remove</Text>
               </TouchableOpacity>
             </View>
-            {croppedImageUri && (
-              <Text className="text-xs text-green-600 mt-1 text-center">✅ Cropped</Text>
-            )}
           </View>
         )}
 
@@ -263,9 +297,16 @@ export default function CareLogScreen() {
           className={`py-3 rounded-xl mb-8 ${saving || !selectedPlantId ? "bg-gray-300" : "bg-chili-600"
             }`}
         >
-          <Text className="text-white font-bold text-center text-lg">
-            {saving ? "Saving..." : `${CARE_TYPE_CONFIG[careType].emoji} Log ${CARE_TYPE_CONFIG[careType].label}`}
-          </Text>
+          {analyzing ? (
+            <View className="flex-row items-center justify-center">
+              <ActivityIndicator size="small" color="white" className="mr-2" />
+              <Text className="text-white font-bold text-center text-lg">AI Analyzing...</Text>
+            </View>
+          ) : (
+            <Text className="text-white font-bold text-center text-lg">
+              {saving ? "Saving..." : `${CARE_TYPE_CONFIG[careType].emoji} Log ${CARE_TYPE_CONFIG[careType].label}`}
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
 

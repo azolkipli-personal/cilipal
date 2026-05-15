@@ -15,6 +15,7 @@ import * as FileSystem from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDatabase } from "../../src/hooks/useDatabase";
 import { Plant, PLANT_STAGES, STAGE_EMOJI } from "../../src/types";
+import { VARIETIES } from "../../src/data/varieties";
 import { generateId, todayISO } from "../../src/utils/date-utils";
 
 export default function NewPlantScreen() {
@@ -23,7 +24,8 @@ export default function NewPlantScreen() {
   const editId = params.id as string | undefined;
 
   const [name, setName] = useState("");
-  const [variety, setVariety] = useState("");
+  const [varietySlug, setVarietySlug] = useState("jalapeno");
+  const [customVariety, setCustomVariety] = useState("");
   const [stage, setStage] = useState<string>("seedling");
   const [acquiredDate, setAcquiredDate] = useState(todayISO());
   const [notes, setNotes] = useState("");
@@ -36,7 +38,13 @@ export default function NewPlantScreen() {
       repo.getPlantById(editId).then((plant) => {
         if (plant) {
           setName(plant.name);
-          setVariety(plant.variety);
+          const found = VARIETIES.find(v => v.slug === plant.variety);
+          if (found) {
+            setVarietySlug(plant.variety);
+          } else {
+            setVarietySlug("custom");
+            setCustomVariety(plant.variety);
+          }
           setStage(plant.stage);
           setAcquiredDate(plant.acquired_date);
           setNotes(plant.notes);
@@ -79,11 +87,13 @@ export default function NewPlantScreen() {
     if (!repo) return;
     setSaving(true);
 
+    const finalVariety = varietySlug === "custom" ? customVariety.trim() || "Unknown" : varietySlug;
+
     try {
       if (editId) {
         await repo.updatePlant(editId, {
           name: name.trim(),
-          variety: variety.trim(),
+          variety: finalVariety,
           stage: stage as Plant["stage"],
           acquired_date: acquiredDate,
           notes: notes.trim(),
@@ -93,7 +103,7 @@ export default function NewPlantScreen() {
         await repo.insertPlant({
           id: generateId(),
           name: name.trim(),
-          variety: variety.trim() || "Gekikara",
+          variety: finalVariety,
           acquired_date: acquiredDate,
           profile_photo_uri: photoUri,
           stage: stage as Plant["stage"],
@@ -155,15 +165,55 @@ export default function NewPlantScreen() {
           onChangeText={setName}
         />
 
-        {/* Variety */}
-        <Text className="text-sm font-medium text-gray-700 mb-1">Variety</Text>
-        <TextInput
-          className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4 text-gray-800"
-          placeholder="e.g. Gekikara (default)"
-          placeholderTextColor="#9CA3AF"
-          value={variety}
-          onChangeText={setVariety}
-        />
+        {/* Variety Selection */}
+        <Text className="text-sm font-medium text-gray-700 mb-2">Chilli Variety</Text>
+        <ScrollView horizontal className="mb-2" showsHorizontalScrollIndicator={false}>
+          {VARIETIES.map((v) => (
+            <TouchableOpacity
+              key={v.slug}
+              onPress={() => setVarietySlug(v.slug)}
+              className={`px-4 py-3 rounded-xl mr-2 ${
+                varietySlug === v.slug ? "bg-chili-600" : "bg-white border border-gray-200"
+              }`}
+            >
+              <Text className={varietySlug === v.slug ? "text-white font-medium" : "text-gray-700"}>
+                {v.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            onPress={() => setVarietySlug("custom")}
+            className={`px-4 py-3 rounded-xl mr-2 ${
+              varietySlug === "custom" ? "bg-chili-600" : "bg-white border border-gray-200"
+            }`}
+          >
+            <Text className={varietySlug === "custom" ? "text-white font-medium" : "text-gray-700"}>
+              ✨ Other
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {varietySlug === "custom" && (
+          <TextInput
+            className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-4 text-gray-800"
+            placeholder="Enter custom variety name"
+            placeholderTextColor="#9CA3AF"
+            value={customVariety}
+            onChangeText={setCustomVariety}
+          />
+        )}
+
+        {/* Variety Info Preview */}
+        {varietySlug !== "custom" && (
+          <View className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-4">
+            <Text className="text-xs text-orange-800 font-bold mb-1 uppercase tracking-wider">
+              {VARIETIES.find((v) => v.slug === varietySlug)?.heat_level} Heat Level
+            </Text>
+            <Text className="text-sm text-gray-700 italic">
+              "{VARIETIES.find((v) => v.slug === varietySlug)?.care_tips}"
+            </Text>
+          </View>
+        )}
 
         {/* Stage */}
         <Text className="text-sm font-medium text-gray-700 mb-2">Growth Stage</Text>
